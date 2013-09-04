@@ -12,7 +12,7 @@ namespace Sonata\DoctrinePHPCRAdminBundle\Datagrid;
 
 use Doctrine\ODM\PHPCR\DocumentManager;
 use Sonata\AdminBundle\Datagrid\ProxyQueryInterface;
-use Doctrine\ODM\PHPCR\Query\QueryBuilder;
+use Doctrine\ODM\PHPCR\Query\QueryBuilder\Builder;
 
 /**
  * This class is used to abstract the Admin Bundle from the different QueryBuilder implementations
@@ -57,10 +57,9 @@ class ProxyQuery implements ProxyQueryInterface
     /**
      * Creates a Query Builder from the QOMFactory
      *
-     * @param \PHPCR\Query\QOM\QueryObjectModelFactoryInterface $qomFactory
-     * @param \PHPCR\Util\QOM\QueryBuilder $queryBuilder
+     * @param Builder $queryBuilder
      */
-    public function __construct(QueryBuilder $queryBuilder)
+    public function __construct(Builder $queryBuilder)
     {
         $this->qb = $queryBuilder;
     }
@@ -76,7 +75,16 @@ class ProxyQuery implements ProxyQueryInterface
     public function execute(array $params = array(), $hydrationMode = null)
     {
         if ($this->getSortBy()) {
-            $this->qb->orderBy($this->sortBy, $this->sortOrder);
+            switch ($this->sortOrder) {
+                case 'DESC':
+                    $this->qb->orderBy()->descending()->propertyValue('a', $this->sortBy);
+                    break;
+                case 'ASC':
+                    $this->qb->orderBy()->ascending()->propertyValue('a', $this->sortBy);
+                    break;
+                default:
+                    throw new \Exception('Unsupported sort order direction: '.$this->sortOrder);
+            }
         }
 
         return $this->qb->getQuery()->execute();
